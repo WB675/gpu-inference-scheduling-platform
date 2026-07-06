@@ -1,0 +1,13 @@
+[Unit]
+Description=Lightweight Kubernetes
+Documentation=https://k3s.io
+After=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/k3s server --write-kubeconfig-mode 644
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
