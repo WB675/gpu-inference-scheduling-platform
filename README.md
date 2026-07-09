@@ -1,31 +1,32 @@
+```markdown
 # GPU-Aware Inference Platform on Kubernetes  
 **Volcano Scheduling × DCGM Observability**
 
-> 在 Kubernetes 上构建具备优先级抢占与 GPU 实时监控的推理服务平台
+> 基于 Kubernetes 构建 GPU 推理平台的底座：手动注册 GPU 资源、实现优先级抢占调度，并搭建 GPU 实时监控体系。  
+> 本项目所有操作均在实际云 GPU 环境中完成，并提供完整的自动化脚本与排障文档。
 
 ---
 
-## 🎯 项目目标
+## ✨ 核心特性
 
-- [ ] **GPU 资源虚拟化与调度** —— 基于 NVIDIA Device Plugin 将物理 GPU 抽象为 Kubernetes 可调度资源，并通过 Volcano 实现优先级抢占  
-- [ ] **实时 GPU 可观测性** —— 部署 Prometheus + Grafana + DCGM Exporter，导入 NVIDIA 官方 Dashboard，配置显存、温度等告警规则  
-- [ ] **高性能推理服务** —— 使用 vLLM 部署生产级 LLM 推理服务，支持动态加载模型  
-- [ ] **模型存储与分发** —— 集成 MinIO (或本地路径) 作为模型仓库，实现模型版本管理  
-- [ ] **自动化部署与排障指南** —— 提供全套 Shell 脚本与排障文档，保证可复现性  
+- ✅ **GPU 资源注册与管理**：通过 NVIDIA Device Plugin 将物理 GPU 抽象为 Kubernetes 可调度资源
+- ✅ **优先级抢占调度**：集成 Volcano 调度器，实现高优任务对低优任务的抢占，保障关键任务 SLA
+- ✅ **GPU 实时监控**：DCGM Exporter + Prometheus + Grafana 采集 GPU 温度、显存、利用率等指标
+- ✅ **一键部署与演示**：提供 `setup.sh` 一键部署核心组件，`run_exp.sh` 自动执行抢占演示
+- ✅ **真实排障文档**：记录从零搭建到 GPU 抢占过程中的 15+ 个典型故障及解决方案
 
 ---
 
-## ⚙️ 技术选型
+## ⚙️ 技术栈
 
-| 层级         | 技术组件           | 说明                                 |
-|--------------|--------------------|--------------------------------------|
-| 容器编排     | k3s                | 轻量级 Kubernetes 发行版，适合单节点 |
-| GPU 支持     | NVIDIA Container Toolkit, Device Plugin | 驱动注入、设备注册           |
-| 调度增强     | Volcano            | 支持队列、优先级、公平调度            |
-| 推理引擎     | vLLM               | 高吞吐、低延迟的 LLM 推理框架        |
-| 监控与可视化 | Prometheus, Grafana, DCGM Exporter | GPU 指标采集与告警       |
-| 对象存储     | MinIO (可选)       | 模型存储与管理                      |
-| 基础设施脚本 | Bash, Kubernetes YAML, Helm | 一键部署与重置                 |
+| 层级         | 组件                                                 |
+| ------------ | ---------------------------------------------------- |
+| 容器编排     | K3s v1.36.2                                          |
+| GPU 支持     | NVIDIA Container Toolkit, NVIDIA Device Plugin       |
+| 调度增强     | Volcano (Queue + PriorityClass)                      |
+| 监控与可视化 | Prometheus, Grafana, DCGM Exporter                   |
+| 镜像管理     | 阿里云 ACR 私仓（解决网络受限场景下的镜像拉取）      |
+| 基础设施脚本 | Bash, Kubernetes YAML, Helm                          |
 
 ---
 
@@ -33,69 +34,105 @@
 
 ```
 .
-├── .gitignore             # Git 忽略规则（日志、临时文件等）
 ├── README.md
-├── scripts/               # 部署与管理脚本 (施工中)
-│   ├── init-system.sh
-│   ├── install-k3s.sh
-│   ├── install-nvidia-toolkit.sh
-│   └── start-k3s.sh
-├── deploy/                # Kubernetes 资源文件 (施工中)
-│   ├── registries.yaml
-│   ├── nvidia-device-plugin.yaml
-│   ├── k3s.service
-│   └── volcano/           # Volcano 相关配置 (规划中)
-├── docs/                  # 设计文档与排障指南
-│   ├── architecture.md
-│   ├── k3s-troubleshooting.md
-│   └── gpu-plugin-troubleshooting.md
-├── monitoring/            # 监控栈配置 (规划中)
-└── models/                # 模型文件说明 (不包含二进制)
+├── .gitignore
+├── scripts/
+│   ├── init-system.sh               # 系统初始化与包修复
+│   ├── install-k3s.sh               # k3s 安装 + 镜像加速
+│   ├── install-nvidia-toolkit.sh    # 安装 nvidia-container-runtime
+│   ├── start-k3s.sh                 # k3s 启动与验证
+│   ├── setup.sh                     # 一键部署 GPU 调度与监控栈
+│   └── run_exp.sh                   # 自动执行 GPU 优先级抢占演示
+├── deploy/
+│   ├── registries.yaml              # 容器镜像加速配置
+│   ├── nvidia-device-plugin.yaml    # NVIDIA Device Plugin DaemonSet
+│   ├── k3s.service                  # k3s systemd 服务文件
+│   ├── volcano/
+│   │   ├── queue-and-priority.yaml  # Queue + PriorityClass 定义
+│   │   └── low-high-pods.yaml       # 示例高/低优先级 Pod
+│   └── monitoring/
+│       └── monitoring-components.yaml  # Prometheus + Grafana + DCGM Exporter 部署
+├── docs/
+│   ├── k3s-troubleshooting.md       # K3s 部署全故障排障（真实日志）
+│   └── gpu-plugin-troubleshooting.md  # GPU 插件排障（段错误、注册超时等）
+├── screenshots/
+│   ├── 1-gpu-occupied.png           # 低优 Pod 占用 GPU 截图
+│   └── 2-high-priority-running.png  # 高优 Pod 抢占成功截图
+└── monitoring/                      # 监控相关（已整合至 YAML）
 ```
-
-`.gitignore` 已预先配置，避免临时文件、日志、密钥等误提交到仓库。
 
 ---
 
 ## 🚀 快速开始
 
-> 项目目前处于框架搭建阶段，详细部署步骤将在后续提交中补充。  
-> 环境依赖：一台配备 NVIDIA T4 (或更高) GPU 的 Ubuntu 22.04 服务器。
+### 环境要求
+- 一台带 NVIDIA GPU（如 Tesla T4）的 Ubuntu 22.04 服务器
+- 已安装 NVIDIA 驱动 (≥ 535) 和 CUDA (≥ 12.2)
+- 建议配置阿里云 ACR 私仓以解决公网访问限制（项目内已提供配置模板）
+
+### 部署步骤
 
 ```bash
-# 1. 克隆仓库
+# 克隆仓库
 git clone https://github.com/your-org/gpu-inference-platform.git
 cd gpu-inference-platform
 
-# 2. 系统初始化 (待实现)
-# sudo bash scripts/init-system.sh
+# 1. 一键部署 GPU 调度与监控组件
+bash scripts/setup.sh
 
-# 3. 安装 k3s + GPU 支持 (待实现)
-# sudo bash scripts/install-k3s.sh
-# sudo bash scripts/install-nvidia-toolkit.sh
-# kubectl apply -f deploy/nvidia-device-plugin.yaml
-
-# 4. 部署监控栈 (待实现)
-# helm install ...
+# 2. 运行优先级抢占演示
+bash scripts/run_exp.sh
 ```
 
----
+`setup.sh` 将依次部署：
+- **NVIDIA Device Plugin** （使 Kubernetes 识别 GPU）
+- **Volcano Queue + PriorityClass** （定义 GPU 队列与优先级）
+- **Prometheus + Grafana + DCGM Exporter**（GPU 监控栈）
 
-## 📋 开发计划
-
-| 阶段     | 内容                           | 状态 |
-|----------|--------------------------------|------|
-| Phase 0  | 项目骨架、技术选型、README     | ✅   |
-| Phase 1  | 环境初始化与 GPU 资源注册      | 🚧   |
-| Phase 2  | 部署 Prometheus + Grafana + DCGM | ⬜   |
-| Phase 3  | 集成 Volcano 调度器，实现抢占  | ⬜   |
-| Phase 4  | vLLM 推理服务 + 模型加载       | ⬜   |
-| Phase 5  | 全链路压测、架构图、演示视频   | ⬜   |
+`run_exp.sh` 将自动创建低优先 Pod（占用 GPU）、高优先 Pod（触发抢占）并输出全过程日志，可直接用于演示或截图。
 
 ---
 
-## 📖 文档
+## 📸 优先级抢占演示效果
 
-- 系统架构图（待绘制）
-- [K3s 排障指南](docs/k3s-troubleshooting.md)（待完善）
-- [GPU 插件排障指南](docs/gpu-plugin-troubleshooting.md)（待完善）
+### 低优先级 Pod 抢占前占用 GPU
+![低优先级 Pod 占用 GPU](screenshots/1-gpu-occupied.png)
+
+### 高优先级 Pod 提交后抢占成功
+![高优先级 Pod 提交后抢占成功](screenshots/2-high-priority-running.png)
+
+高优任务提交后，低优任务被驱逐，GPU 分配给高优任务，证明优先级抢占机制生效。
+
+---
+
+## 🛠️ 排障文档
+
+本项目在真实云环境部署过程中遇到并解决**六大类典型故障**，详细过程已整理为排障指南：
+
+- [K3s 部署全故障排障](docs/k3s-troubleshooting.md)：镜像拉取超时、CNI 未初始化、kine.sock 丢失、systemd 端口冲突等（含真实日志与命令）
+- [GPU Device Plugin 排障](docs/gpu-plugin-troubleshooting.md)：容器段错误（exit 139）、注册超时、socket 路径不匹配等
+
+这些文档直接从实际故障中提炼，是展示工程实战能力的重要材料。
+
+---
+
+## 🧪 验证方法
+
+- **GPU 资源成功注册**后，节点详情中将显示：  
+  ```
+  Capacity:
+    nvidia.com/gpu:     1
+  Allocatable:
+    nvidia.com/gpu:     1
+  ```
+
+- **监控栈部署后**，Grafana Dashboard（导入 12239）可实时查看 GPU 温度、显存、利用率等指标。
+
+---
+
+
+## ✍️ 作者
+
+Wang B.  
+本项目为个人学习与技术展示，所有组件均在真实云环境中完成部署与验证。
+```
