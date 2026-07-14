@@ -1,4 +1,3 @@
-```markdown
 # GPU-Aware Inference Platform on Kubernetes  
 **Volcano Scheduling × DCGM Observability**
 
@@ -13,7 +12,7 @@
 - ✅ **优先级抢占调度**：集成 Volcano 调度器，实现高优任务对低优任务的抢占，保障关键任务 SLA
 - ✅ **GPU 实时监控**：DCGM Exporter + Prometheus + Grafana 采集 GPU 温度、显存、利用率等指标
 - ✅ **一键部署与演示**：提供 `setup.sh` 一键部署核心组件，`run_exp.sh` 自动执行抢占演示
-- ✅ **真实排障文档**：记录从零搭建到 GPU 抢占过程中的 15+ 个典型故障及解决方案
+- ✅ **真实排障文档**：记录从零搭建到 GPU 抢占过程中的典型故障及解决方案
 
 ---
 
@@ -28,38 +27,6 @@
 | 镜像管理     | 阿里云 ACR 私仓（解决网络受限场景下的镜像拉取）      |
 | 基础设施脚本 | Bash, Kubernetes YAML, Helm                          |
 
----
-
-## 📁 项目结构
-
-```
-.
-├── README.md
-├── .gitignore
-├── scripts/
-│   ├── init-system.sh               # 系统初始化与包修复
-│   ├── install-k3s.sh               # k3s 安装 + 镜像加速
-│   ├── install-nvidia-toolkit.sh    # 安装 nvidia-container-runtime
-│   ├── start-k3s.sh                 # k3s 启动与验证
-│   ├── setup.sh                     # 一键部署 GPU 调度与监控栈
-│   └── run_exp.sh                   # 自动执行 GPU 优先级抢占演示
-├── deploy/
-│   ├── registries.yaml              # 容器镜像加速配置
-│   ├── nvidia-device-plugin.yaml    # NVIDIA Device Plugin DaemonSet
-│   ├── k3s.service                  # k3s systemd 服务文件
-│   ├── volcano/
-│   │   ├── queue-and-priority.yaml  # Queue + PriorityClass 定义
-│   │   └── low-high-pods.yaml       # 示例高/低优先级 Pod
-│   └── monitoring/
-│       └── monitoring-components.yaml  # Prometheus + Grafana + DCGM Exporter 部署
-├── docs/
-│   ├── k3s-troubleshooting.md       # K3s 部署全故障排障（真实日志）
-│   └── gpu-plugin-troubleshooting.md  # GPU 插件排障（段错误、注册超时等）
-├── screenshots/
-│   ├── 1-gpu-occupied.png           # 低优 Pod 占用 GPU 截图
-│   └── 2-high-priority-running.png  # 高优 Pod 抢占成功截图
-└── monitoring/                      # 监控相关（已整合至 YAML）
-```
 
 ---
 
@@ -94,9 +61,6 @@ bash scripts/run_exp.sh
 ---
 
 ## 📸 优先级抢占演示效果
-
-### 低优先级 Pod 抢占前占用 GPU
-![低优先级 Pod 占用 GPU](screenshots/1-gpu-occupied.png)
 
 ### 高优先级 Pod 提交后抢占成功
 ![高优先级 Pod 提交后抢占成功](screenshots/2-high-priority-running.png)
